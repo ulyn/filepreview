@@ -26,6 +26,8 @@
 ![输入图片说明](https://gitee.com/uploads/images/2017/1219/173717_934cb068_492218.png "屏幕截图.png")
 QQ群号：613025121
 
+### kkfileview使用问题答疑，99%的使用问题都能找到答案
+> kkfileView使用问题年终答疑篇：https://my.oschina.net/keking/blog/3007867
 ### 文档预览效果
 > Excel预览效果
 
