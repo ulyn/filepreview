@@ -1,11 +1,16 @@
 package cn.keking.service.impl;
 
+import com.sunsharing.component.utils.crypto.Md5;
+
 import cn.keking.model.FileAttribute;
 import cn.keking.model.ReturnResponse;
 import cn.keking.service.FilePreview;
 import cn.keking.utils.DownloadUtils;
 import cn.keking.utils.FileUtils;
 import cn.keking.utils.OfficeToPdf;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -22,6 +27,8 @@ import java.io.File;
 @Service
 public class OfficeFilePreviewImpl implements FilePreview {
 
+    Logger logger = LoggerFactory.getLogger(getClass());
+
     @Autowired
     FileUtils fileUtils;
 
@@ -36,25 +43,29 @@ public class OfficeFilePreviewImpl implements FilePreview {
 
     @Override
     public String filePreviewHandle(String url, Model model) {
+        logger.info("filePreviewHandle : " + url);
         FileAttribute fileAttribute=fileUtils.getFileAttribute(url);
         String suffix=fileAttribute.getSuffix();
         String fileName=fileAttribute.getName();
         String decodedUrl=fileAttribute.getDecodedUrl();
         boolean isHtml = suffix.equalsIgnoreCase("xls") || suffix.equalsIgnoreCase("xlsx");
-        String pdfName = fileName.substring(0, fileName.lastIndexOf(".") + 1) + (isHtml ? "html" : "pdf");
+        logger.info("fileName : " + fileName);
+        String pdfName = Md5.MD5(url) + "." + (isHtml ? "html" : "pdf");
+        logger.info("pdfName : " + pdfName);
         // 判断之前是否已转换过，如果转换过，直接返回，否则执行转换
-        if (!fileUtils.listConvertedFiles().containsKey(pdfName)) {
+        // if (!fileUtils.listConvertedFiles().containsKey(pdfName)) {
             String filePath = fileDir + fileName;
             if (!new File(filePath).exists()) {
                 ReturnResponse<String> response = downloadUtils.downLoad(decodedUrl, suffix, null);
                 if (0 != response.getCode()) {
-                    model.addAttribute("msg", response.getMsg());
+                        model.addAttribute("msg", response.getMsg());
                     return "fileNotSupported";
                 }
                 filePath = response.getContent();
             }
             String outFilePath = fileDir + pdfName;
             if (StringUtils.hasText(outFilePath)) {
+                logger.info("openOfficeToPDF outFilePath：" + outFilePath);
                 officeToPdf.openOfficeToPDF(filePath, outFilePath);
                 File f = new File(filePath);
                 if (f.exists()) {
@@ -67,8 +78,8 @@ public class OfficeFilePreviewImpl implements FilePreview {
                 // 加入缓存
                 fileUtils.addConvertedFile(pdfName, fileUtils.getRelativePath(outFilePath));
             }
-        }
-        model.addAttribute("pdfUrl", pdfName);
+        // }
+        model.addAttribute("pdfUrl", "office/" + pdfName);
         return isHtml ? "html" : "pdf";
     }
 }

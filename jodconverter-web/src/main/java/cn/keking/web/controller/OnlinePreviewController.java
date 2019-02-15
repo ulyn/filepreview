@@ -6,13 +6,17 @@ import org.redisson.api.RedissonClient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.ResponseBody;
 
+import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.UnsupportedEncodingException;
@@ -44,6 +48,8 @@ public class OnlinePreviewController {
 
     @Autowired
     RedissonClient redissonClient;
+    @Value("${file.dir}")
+    String fileDir;
 
     /**
      * @param url
@@ -95,6 +101,18 @@ public class OnlinePreviewController {
         return "picture";
     }
 
+    @RequestMapping(value = "/office/{filename:.+}", method = RequestMethod.GET)
+    public void getOfficeFiles(@PathVariable String filename, HttpServletResponse resp) throws IOException {
+        File file = new File(fileDir + filename);
+        logger.info("file:" + file.toURI().getRawPath());
+        FileInputStream inputStream = new FileInputStream(file);
+        try {
+            IOUtils.copy(new FileInputStream(file), resp.getOutputStream());
+        } finally {
+            IOUtils.closeQuietly(inputStream);
+        }
+    }
+
     /**
      * 根据url获取文件内容
      * 当pdfjs读取存在跨域问题的文件时将通过此接口读取
@@ -109,18 +127,18 @@ public class OnlinePreviewController {
             String strUrl = urlPath.trim();
             Map<String, String[]> headParams = new HashMap();
             if (strUrl.indexOf("?") != -1) {
-                String pathString = strUrl.substring(0,strUrl.indexOf("?") + 1);
+                String pathString = strUrl.substring(0, strUrl.indexOf("?") + 1);
                 String queryString = strUrl.substring(strUrl.indexOf("?") + 1);
                 String[] params = queryString.split("\\&");
                 for (String p : params) {
                     String[] arr = p.split("=");
                     if (arr[0].startsWith("_head_")) {
                         headParams.put(arr[0], new String[]{arr.length == 2 ? arr[1] : ""});
-                    }else{
+                    } else {
                         pathString += p + "&";
                     }
                 }
-                strUrl = pathString.substring(0,pathString.length() - 1);
+                strUrl = pathString.substring(0, pathString.length() - 1);
             }
             req.setAttribute("_params_", headParams);
             logger.info("fileurl:" + strUrl);
