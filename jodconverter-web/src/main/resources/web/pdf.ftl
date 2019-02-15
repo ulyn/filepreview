@@ -16,7 +16,8 @@
     <#else>
         <#assign finalUrl="${baseUrl}${pdfUrl}">
     </#if>
-    <iframe src="/pdfjs/web/viewer.html?file=${finalUrl}" width="100%" frameborder="0"></iframe>
+ <#setting url_escaping_charset='utf-8'>
+<iframe src="/pdfjs/web/viewer.html?file=${finalUrl?url}" width="100%" frameborder="0"></iframe>
 </body>
 <script type="text/javascript">
     document.getElementsByTagName('iframe')[0].height = document.documentElement.clientHeight-10;

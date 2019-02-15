@@ -13,6 +13,7 @@ import org.springframework.stereotype.Component;
 
 import java.io.*;
 import java.net.URLDecoder;
+import java.net.URLEncoder;
 import java.nio.charset.Charset;
 import java.util.Arrays;
 import java.util.List;
@@ -278,5 +279,11 @@ public class FileUtils {
         // 抽取文件并返回文件列表
         String fileName = getFileNameFromURL(decodedUrl);
         return new FileAttribute(type,suffix,fileName,url,decodedUrl);
+    }
+
+    public static void main(String[] args) throws UnsupportedEncodingException {
+        String url = "http://192.168.0.222:8080/zeus/02Document/M20指令集开发手册1.1.2.pdf";
+
+        System.out.println(DownloadUtils.encodeUrlParam(url));
     }
 }
