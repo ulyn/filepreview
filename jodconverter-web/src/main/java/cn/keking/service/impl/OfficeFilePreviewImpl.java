@@ -9,6 +9,7 @@ import cn.keking.utils.DownloadUtils;
 import cn.keking.utils.FileUtils;
 import cn.keking.utils.OfficeToPdf;
 
+import org.apache.commons.codec.digest.DigestUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -19,6 +20,9 @@ import org.springframework.ui.Model;
 import org.springframework.util.StringUtils;
 
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.IOException;
 
 /**
  * Created by kl on 2018/1/17.
@@ -50,19 +54,27 @@ public class OfficeFilePreviewImpl implements FilePreview {
         String decodedUrl=fileAttribute.getDecodedUrl();
         boolean isHtml = suffix.equalsIgnoreCase("xls") || suffix.equalsIgnoreCase("xlsx");
         logger.info("fileName : " + fileName);
+        String filePath = fileDir + fileName;
+        if (!new File(filePath).exists()) {
+            ReturnResponse<String> response = downloadUtils.downLoad(decodedUrl, suffix, null);
+            if (0 != response.getCode()) {
+                model.addAttribute("msg", response.getMsg());
+                return "fileNotSupported";
+            }
+            filePath = response.getContent();
+        }
+        String sha256 = "";
+        //下载以文件SHA256做名称，唯一性，作为是否需要再次转换的判断
+        try (FileInputStream fileInputStream = new FileInputStream(filePath)) {
+            sha256 = DigestUtils.sha256Hex(fileInputStream);
+        } catch (Exception e) {
+            throw new RuntimeException("计算文件SHA256异常",e);
+        }
+
         String pdfName = Md5.MD5(url) + "." + (isHtml ? "html" : "pdf");
         logger.info("pdfName : " + pdfName);
         // 判断之前是否已转换过，如果转换过，直接返回，否则执行转换
-        // if (!fileUtils.listConvertedFiles().containsKey(pdfName)) {
-            String filePath = fileDir + fileName;
-            if (!new File(filePath).exists()) {
-                ReturnResponse<String> response = downloadUtils.downLoad(decodedUrl, suffix, null);
-                if (0 != response.getCode()) {
-                        model.addAttribute("msg", response.getMsg());
-                    return "fileNotSupported";
-                }
-                filePath = response.getContent();
-            }
+        if (!fileUtils.listConvertedFiles().containsKey(sha256)) {
             String outFilePath = fileDir + pdfName;
             if (StringUtils.hasText(outFilePath)) {
                 logger.info("openOfficeToPDF outFilePath：" + outFilePath);
@@ -76,9 +88,9 @@ public class OfficeFilePreviewImpl implements FilePreview {
                     fileUtils.doActionConvertedFile(outFilePath);
                 }
                 // 加入缓存
-                fileUtils.addConvertedFile(pdfName, fileUtils.getRelativePath(outFilePath));
+                fileUtils.addConvertedFile(sha256, fileUtils.getRelativePath(outFilePath));
             }
-        // }
+        }
         model.addAttribute("pdfUrl", "office/" + pdfName);
         return isHtml ? "html" : "pdf";
     }
